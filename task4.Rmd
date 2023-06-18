@@ -1,0 +1,39 @@
+---
+title: "Untitled"
+author: "Rachkov Denis"
+date: "2023-03-27"
+output: html_document
+---
+
+```{r}
+data_train <- read.csv("var_19_train.csv")
+data_test <- read.csv("var_19_test.csv")
+head(data_train)
+
+```
+
+```{r}
+model <- glm(output~., data = data_train)
+summary(model)
+```
+
+```{r}
+model <- step(model, steps = 4)
+```
+```{r}
+require(ROCR)
+
+
+```
+```{r}
+bound <- 0.5098
+data_test$score <- predict(model, type = "response", data_test)
+
+output <- rep(0, length(data_test$score))
+output[which(data_test$score > bound)] <- 1
+
+output <- as.data.frame(output, colnames = "output")
+
+write.csv(output, file = "output.csv", quote = F, row.names = F)
+```
+
