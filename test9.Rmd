@@ -1,0 +1,47 @@
+---
+title: "test9"
+author: "Rachkov Denis"
+date: "2023-05-14"
+output: html_document
+---
+
+```{r}
+data <- read.csv("var_19.csv")
+tail(data)
+str(data)
+```
+
+```{r}
+data$Treatment <- as.factor(data$Treatment)
+
+```
+
+```{r}
+model <- lm(Output ~ Treatment, data = data)
+summary(model)
+```
+```{r}
+anova(model)
+```
+```{r}
+(anovag_Sum_Sq_2 <- anova(model)$"Sum Sq"[2])
+```
+```{r}
+(anovag_Sum_Sq_1 <- anova(model)$"Sum Sq"[1])
+```
+
+
+```{r}
+gi <- lm(Output ~ Treatment - 1, data = data)
+anova(gi)
+```
+```{r}
+(anovamgi_Sum_Sq_1 <- anova(gi)$"Sum Sq"[1])
+```
+
+```{r}
+(anovamgi_Sum_Sq_1 <- anova(gi)$"Sum Sq"[2])
+```
+
+
+
