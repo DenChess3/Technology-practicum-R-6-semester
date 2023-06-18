@@ -1,0 +1,138 @@
+---
+title: "Task 1"
+author: "Rachkov Denis"
+date: "2023-03-01"
+output: html_document
+---
+
+# Подготовка данных
+
+
+```{python}
+import pandas as pd
+import yfinance as yf
+import time
+
+```
+
+```{python}
+start_day = '2022-01-01'
+end_day = '2023-01-01'
+```
+
+
+```{python}
+def get_One_Asset(company,start_day, end_day):
+    df = pd.DataFrame()
+    returns = yf.Ticker(company)
+    data = returns.history(period="1y",start=start_day)
+    df.index = data.index
+    df[company] = data.Close
+    return df
+```
+
+```{python}
+company = 'BIO'
+asset = get_One_Asset(company,start_day, end_day)
+asset.head()
+```
+```{python}
+asset["Rates"] = 0
+asset.loc[1:, "Rates"] = asset.BIO.values[1:]/asset.BIO.values[:-1] - 1
+asset.Rates.head()
+```
+
+```{python}
+filename = 'BIO.csv'
+asset.to_csv(filename, index=True)
+```
+
+Загрузим данные в R
+
+```{r}
+data <- read.csv('BIO.csv')
+data$Date <- as.Date(data$Date)
+summary(data)
+head(data)
+
+```
+# Проверка гипотезы случайности
+
+```{r}
+#install.packages('randtests')
+library(randtests)
+```
+Проведем несколько тестов на случайность для выборки доходности акций BIO
+
+```{r}
+rank.test(data$Rates)
+```
+```{r}
+bartels.rank.test(data$Rates)
+```
+```{r}
+cox.stuart.test(data$Rates)
+```
+```{r}
+runs.test(data$Rates)
+```
+```{r}
+turning.point.test(data$Rates)
+```
+Как мы видим, почти все тесты дают значение p-value >0.05, то есть мы не отвергаем гипотезу о случайности (по факты считаем что компоненты выборки доходности независимы и одинаково распределены)
+
+# Проверка гипотезы однородности
+
+```{r}
+d1 <- data[data$Date < "2022-07-01", ]
+d2 <- data[data$Date >= "2022-07-01", ]
+
+```
+
+```{r}
+wilcox.test(d1$Rates, d2$Rates)
+```
+```{r}
+ks.test(d1$Rates, d2$Rates)
+```
+Как мы видим, p-value > 0.05, значит гипотезу о неоднородности мы не отвергаем
+
+# Проверка гипотез о распределении
+
+Сначала поймем, к какому классу распредлений может относиться наша выборка
+
+```{r}
+# install.packages("rriskDistributions")
+library(rriskDistributions)
+```
+
+```{r}
+fit.cont(data2fit = data$Rates)
+```
+```{r}
+qqnorm(data$Rates)
+qqline(data$Rates)
+```
+```{r}
+length(data$Rates)
+
+x <- seq(min(data$Rates), max(data$Rates), length = length(data$Rates))
+y <- dnorm(x, mean = -0.0009747, sd = 0.005)
+y1 <- dlogis(x, location = -0.0009747, scale = 0.005)
+
+hist(data$Rates,
+     prob = TRUE,
+     ylim = c(0, max(y)),
+     main = "Histogram with normal curve")
+lines(x, y, col = 2, lwd = 2)
+lines(x, y1, col = 5, lwd = 2)
+summary(data)
+```
+
+
+Видим, что распредление похоже на нормальное и логистическое.
+
+
+
+
+
