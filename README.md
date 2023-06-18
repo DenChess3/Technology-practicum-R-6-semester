@@ -1,2 +1,2 @@
 # Technology-practicum-6-semester
-Other branch contains tasks and their implementation.
+Task in the test2.html file, realization in the task2.rmd file
