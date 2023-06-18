@@ -1,2 +1,2 @@
 # Technology-practicum-6-semester
-Technology practicum 6th semester
+Other branch contains tasks and their implementation.
