@@ -1,0 +1,107 @@
+---
+title: "Task 3"
+author: "Rachkov Denis"
+date: "2023-03-13"
+output: html_document
+---
+
+# Task 3
+
+## Подготовка данных
+
+Загрузим дневные цены закрытия перечисленных товаров, валют, индексов и акций за последние 2 года
+```{r}
+chfusd <- read.csv("CHFUSD.csv")
+gc <- read.csv("comex.GC.csv")
+eurusd <- read.csv("EURUSD.csv")
+icebrn <- read.csv("ICE.BRN.csv")
+csi300 <- read.csv("INDEX.CSI300.csv")
+ng <- read.csv("NYMEX.NG.csv")
+sp500 <- read.csv("SANDP-500.csv")
+usduah <- read.csv("usduah.csv")
+```
+ 
+Немного преобразуем названия столбцов
+
+```{r}
+df_list <- list(chfusd, gc, eurusd, icebrn, csi300, ng, sp500, usduah)
+df_list <- lapply(df_list, function(df) {
+  names(df)[names(df) == "X.TICKER."] <- "TICKER"
+  names(df)[names(df) == "X.DATE."] <- "DATE"
+  names(df)[names(df) == "X.CLOSE."] <- "CLOSE"
+  df
+})
+
+```
+
+И уберем ненужные столбцы
+```{r}
+name <- c("TICKER","DATE","CLOSE")
+df_list <- lapply(df_list, function(df) df[, name])
+```
+Приведем дату к нужному виду
+
+```{r}
+df_list <- lapply(df_list, function(df) {
+  df$DATE <- as.Date(df$DATE, "%d/%m/%y")
+  df
+})
+```
+
+
+Создадим пустой датафрейм для объединения всех данных
+```{r}
+
+DATE <- seq(as.Date("2021/02/05"), as.Date("2023/02/06"), by = "day")
+a <- sapply(df_list, function(df) df[1, "TICKER"])
+data <- data.frame(DATE)
+data[, a] = NA
+```
+
+И загрузим в него все данные
+```{r}
+
+for (j in 2:9) {
+  for (i in df_list[[j-1]]$DATE) {
+    data[, j][data$DATE == i] = df_list[[j-1]]$CLOSE[df_list[[j-1]]$DATE == i]
+  }
+}
+
+data <- data[complete.cases(data),]
+length(data[,1])
+rownames(data) <- seq(1:length(data[,1]))
+head(data)
+
+```
+Сохраним полученные данные в stock.csv
+```{r}
+#data_to_save <- data
+#data_to_save$DATE <- format(data_to_save$DATE, "%d/%m/%y")
+#write.csv(data_to_save, file = "stock.csv", quote = F, row.names = F)
+```
+
+
+Перейдем к логарифмическим доходностям
+
+```{r}
+
+rates <- as.data.frame(diff(log(as.matrix(data[,2:ncol(data)]))))
+rates$DATE <- data$DATE[2:nrow(data)]
+rownames(rates) <- seq(1:nrow(rates))
+head(rates)
+```
+
+
+## Построение регрессионной модели
+
+```{r}
+lreg <- lm(rates$USDUAH ~ rates$CHFUSD + rates$comex.GC + rates$EURUSD + rates$ICE.BRN + rates$INDEX.CSI300 + rates$`SANDP-500` + rates$NYMEX.NG, data = rates)
+summary(lreg)
+
+```
+Как мы видим, все признаки незначимы, т.е. модель вырождена
+
+
+
+
+
