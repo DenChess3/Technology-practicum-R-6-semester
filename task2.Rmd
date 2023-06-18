@@ -1,0 +1,144 @@
+---
+title: "task2"
+author: "Rachkov Denis"
+date: "2023-03-05"
+output: html_document
+---
+
+
+```{r}
+asset <- read.table("Asset.csv",header=TRUE,sep=',',row.names = 1)
+head(asset)
+
+```
+```{r}
+data <- read.table("GAZP.csv",header=TRUE,sep=',')
+data$X.DATE. <- as.Date(data$X.DATE., format="%d/%m/%y")
+head(data, 15)
+
+```
+
+```{r}
+imoex<- read.table("IMOEX.csv",header=TRUE,sep=',',row.names = 1)
+head(imoex)
+
+```
+
+```{r}
+#install.packages('PerformanceAnalytics')
+library(PerformanceAnalytics)
+```
+
+```{r}
+colnames(asset)<- c("RTLK")
+plot(asset$RTLK,type = 'b',main="RTLK daily",pch = 21, col = "green",lwd = 2,xlab= 'data',ylab = "price" )
+head(asset)
+```
+```{r}
+colnames(imoex)<- c("IMOEX")
+plot(imoex$IMOEX,type = 'b',main="Index MOEX daily",pch = 21, col = "green",lwd = 2,xlab= 'data',ylab = "index" )
+```
+
+```{r}
+Rf <-0.04
+
+len<-  dim(asset)[1]
+r1 <- diff(log(asset$RTLK))
+r2 <- diff(log(imoex$IMOEX))
+rates <- cbind(r1,r2)
+
+colnames(rates)<- c("RTLK","IMOEX")
+rownames(rates)<-as.character(as.Date(rownames(asset)[2:len],"%m/%d/%Y"))
+head(rates)
+plot(rates[,'RTLK'],main= 'RTLK. Log rates',type ='b',pch =21,col = 'green')
+```
+```{r}
+len <- dim(data)[1]
+r1 <- diff(log(data$X.CLOSE.))
+r2 <- diff(log(imoex$IMOEX))
+log_rates <- cbind(r1, r2)
+
+
+colnames(log_rates) <- c("GAZP", "IMOEX")
+rownames(log_rates) <- as.character(data$X.DATE.[2:len])
+
+head(log_rates)
+tail(log_rates)
+length(log_rates[, "GAZP"])
+```
+```{r}
+(beta <- CAPM.beta(log_rates[, "GAZP"],log_rates[, "IMOEX"]))
+(alpha <- CAPM.alpha(log_rates[, "GAZP"],log_rates[, "IMOEX"],Rf = 0.04))
+```
+```{r}
+(beta_manual <- cov(log_rates[, "GAZP"],log_rates[, "IMOEX"])/ var(log_rates[, "IMOEX"]))
+```
+
+
+Начинаю искать нужные коэффициенты
+
+```{r}
+beta <- CAPM.beta(rates[, "RTLK"],rates[, "IMOEX"])
+alpha <- CAPM.alpha(rates[, "RTLK"],rates[, "IMOEX"],Rf = 0.04)
+beta
+alpha
+
+```
+
+```{r}
+beta_manual <- cov(rates[, "RTLK"],rates[, "IMOEX"])/ var(rates[, "IMOEX"])
+beta_manual
+```
+
+
+```{r}
+sharp <- SharpeRatio(rates[, "RTLK"], Rf = Rf, p = 0.95, FUN = c("StdDev"))
+sharp[1]
+```
+
+```{r}
+dif <- diff(asset[, "RTLK"])
+mean_dif <- mean(dif)
+vol <- sd(dif)
+a = 0.95
+(var_gauss = qnorm(1-a,mean=mean_dif,sd=1)*vol)
+```
+```{r}
+varhist <- VaR(rates, p=.95, method="historical")
+var_hist <- varhist[, "RTLK"]
+var_hist
+```
+
+```{r}
+vargaus <- VaR(rates, p=.95, method="gaussian")
+var_gauss <- vargaus[, "RTLK"]
+var_gauss
+```
+
+
+```{r}
+shortfall_gauss <- ES(rates[, "RTLK"], p=.95, method="gaussian")
+shortfall_gauss
+```
+```{r}
+shortfall_hist <- ES(rates[, "RTLK"], p=.95, method="historical")
+shortfall_hist
+```
+
+Result
+
+```{r}
+res <- list(
+    beta = beta,
+    alpha = alpha,
+    sharp=sharp[1],
+    var_hist = var_hist,
+    var_gauss= var_gauss,
+    shortfall_gauss=shortfall_gauss,
+    shortfall_hist=shortfall_hist
+)
+res
+```
+
+
+
